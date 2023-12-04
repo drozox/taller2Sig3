@@ -1,0 +1,33 @@
+[class *="col"] {
+
+    background: #33b5e2;
+    margin-bottom: 4vh;
+    height: 10vh;
+
+}
+
+.map-container {
+    height: 40em;
+    margin: 0px;
+    background-color: transparent;
+    padding: 1em;
+    box-sizing: border-box;
+}
+
+#map {
+    height: 100%;
+    width: 100%;
+    
+    box-sizing: border-box;
+}
+
+p {
+    margin: 0px;
+}
+
+main{
+    align-items: center;
+}
+.btn{
+    margin-bottom: 1em;
+}

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prueba de Ruteo</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.8.0/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.8.0/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Añadir algunos estilos para el contenedor del mapa */
+    .map {
+      width: 80%;
+      height: 60vh;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Cambiar la clase a ID para el contenedor del mapa -->
+  <div id="map" class="map"></div>
+  <!-- Corregir el orden de las etiquetas de script -->
+
+  <script>
+    var map = L.map("map").setView([3.45, -76.48], 15);
+    var tileLayer = L.tileLayer("http://{s}.tile.osm.org/{z}/{x}/{y}.png", {
+      attribution: "OSM",
+    }).addTo(map);
+
+    var busIcon = L.icon({
+      iconUrl: 'img/bus.svg',
+      iconSize: [15, 15]
+    });
+
+    // Marcador inicial
+    var marker = L.marker([3.45, -76.48], { icon: busIcon }).addTo(map);
+
+    // Evento de clic en el mapa
+    map.on('click', function (e) {
+      // Limpiar marcadores anteriores
+      map.eachLayer(function (layer) {
+        if (layer instanceof L.Marker) {
+          map.removeLayer(layer);
+        }
+      });
+
+      // Crear un segundo marcador
+      var segundoMarcador = L.marker([e.latlng.lat, e.latlng.lng]).addTo(map);
+
+      // Crear el control de enrutamiento con los puntos de inicio y fin
+      var control = L.Routing.control({
+        waypoints: [
+          L.latLng(3.45, -76.48),
+          L.latLng(e.latlng.lat, e.latlng.lng)
+        ]
+      }).on('routesfound', function (e) {
+        e.routes[0].coordinates.forEach(function (coord, index) {
+          setTimeout(() => {
+            // Utiliza setLatLng en lugar de setLatLong
+            marker.setLatLng([coord.lat, coord.lng]);
+          }, 100 * index);
+        });
+      }).addTo(map);
+
+      // Evento 'routeselected' para obtener la ruta y geometría
+      control.on('routeselected', function (e) {
+        var ruta = e.route; // Objeto con la información de la ruta seleccionada
+        var geometry = ruta.geometry; // La geometría de la ruta como que es asincrona porque al llamarla en console log indica que es undefined
+        
+        const polyline = L.polyline(ruta.coordinates, { color: 'blue' })//elemento de leaflet que usa la geometria previa para generar la polilinea
+        polyline.addTo(map)
+
+        // Objeto de JavaScript para convertir lo de leafle a geojson.
+        var geoline = polyline.toGeoJSON();
+        //console.log(geoline.geometry)
+
+        // Convertir el objeto en una cadena JSON pero de texto leible para el SQL.
+        var dataS = JSON.stringify(geoline.geometry)
+
+        console.log(dataS);//para que vea lo que sale
+
+        // Crear un objeto FormData y asignarle la clave "dataS" y el valor dataS esto es para que php pueda manejar bien el dato, se puede hacer de otra manera
+        //pero no me quise complicar
+        var formData = new FormData();
+        formData.append("dataS", dataS);
+       // console.log(formData)//esto al mostrarlo no da mucha informacion del elemento la verdad
+
+        
+
+        //uso fetch para enviar el geojson al agregar.php
+        fetch("./php/agregar.php", {
+          method: "POST",
+          body: formData //los datos enviados.
+        })
+          .then(function (respuesta) {
+            // Verificar si la solicitud fue exitosa
+            if (respuesta.ok) {
+              return respuesta.text(); // Obtener el texto de la respuesta que defino en el php, en este caso son los echo.
+            } else {
+              throw new Error('Error en la solicitud');
+            }
+          })
+          .then(function (data) {
+            // Imprimir la respuesta del servidor en la consola
+            console.log(data);
+          })
+          .catch(function (error) {
+            // Capturar y manejar errores
+            console.error('Error:', error);
+          });
+
+
+
+
+      });
+    });
+
+  </script>
+</body>
+
+</html>
